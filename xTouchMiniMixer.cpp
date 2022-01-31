@@ -4,7 +4,7 @@ XTouchMiniMixer::XTouchMiniMixer(USBH_MIDI *new_pUSBH_MIDI, USB *new_pUSB)
     : pUSBH_MIDI(new_pUSBH_MIDI), pUSB(new_pUSB) {}
 
 void XTouchMiniMixer::setup() {
-  // Serial.println("initializing XTouch");
+  DEBUG_PRINTLN("initializing XTouch");
   setupDebuggingCallbacks();
   setupMidi();
 }
@@ -14,7 +14,7 @@ void XTouchMiniMixer::setupMidi() {
     while (1)
       ;  // halt if (pUSB->Init()==-1
   }
-  // Serial.println("initialized pUSB");
+  DEBUG_PRINTLN("initialized pUSB");
 }
 
 void XTouchMiniMixer::update() {
@@ -36,9 +36,10 @@ void XTouchMiniMixer::setValueMute(uint8_t id, bool val) {
   if (idInActualLayer(id)) return visualizeMuteLed(id);
 }
 void XTouchMiniMixer::setValueFade(uint8_t id, uint8_t val) {
-  /*Serial.print("setValueFade ");
-  Serial.println(id);
-  Serial.println(val);*/
+  DEBUG_PRINT("setValueFade id=");
+  DEBUG_PRINT(id);
+  DEBUG_PRINT(" val=");
+  DEBUG_PRINTLN(val);
   faders[id] = val;
   if (idInActualLayer(id) && (st_control == 0))
     return visualizeHotRotaryValue(id % 8);
@@ -93,10 +94,12 @@ void XTouchMiniMixer::visualizeRotaryValue(uint8_t id) {
 }
 
 void XTouchMiniMixer::sendMidiData(uint8_t cmd, uint8_t id, uint8_t val) {
-  /*Serial.println("sendMidiData");
-  Serial.println(cmd);
-  Serial.println(id);
-  Serial.println(val);*/
+  DEBUG_PRINT("sendMidiData cmd=");
+  DEBUG_PRINT(cmd);
+  DEBUG_PRINT(" id=");
+  DEBUG_PRINT(id);
+  DEBUG_PRINT(" val=");
+  DEBUG_PRINTLN(val);
   uint8_t buf[3];
   buf[0] = cmd;
   buf[1] = id;
@@ -111,10 +114,10 @@ void XTouchMiniMixer::appendToBuf(uint8_t *buf_new) {
   if (j_buf == sizeof(buf_midi) / sizeof(uint8_t)) {
     j_buf = 0;
   }
-  /*Serial.print("midi idx i: ");
-  Serial.print(i_buf);
-  Serial.print(", j: ");
-  Serial.println(j_buf);*/
+  DEBUG_PRINT("midi idx i: ");
+  DEBUG_PRINT(i_buf);
+  DEBUG_PRINT(", j: ");
+  DEBUG_PRINTLN(j_buf);
 }
 
 void XTouchMiniMixer::sendBuf() {
@@ -204,8 +207,8 @@ void XTouchMiniMixer::visualizeControlMode() {
 }
 
 void XTouchMiniMixer::onButtonUp(uint8_t id) {
-  /*Serial.println("Button up");
-  Serial.println(id);*/
+  DEBUG_PRINT("Button up id=");
+  DEBUG_PRINTLN(id);
 
   // get information about layer
   handleNewLayerState(id >= 24);
@@ -227,7 +230,7 @@ void XTouchMiniMixer::onButtonUp(uint8_t id) {
 
 void XTouchMiniMixer::onEncoderMoved(uint8_t ch, uint8_t val) {
   // get information about layer and load into st_layer
-  // Serial.println("onEncoderMoved");
+  DEBUG_PRINTLN("onEncoderMoved");
   handleNewLayerState(ch >= 10);
   switch (ch) {
     case 9:  // main fader
@@ -276,10 +279,6 @@ void XTouchMiniMixer::onSliderMoved(uint8_t val, int8_t aux_main) {
     hw_slider_strt = hw_slider;
     aux_main_strt = aux_main;
   }
-  /*Serial.print("linearizedValue ");
-  Serial.println((int8_t)(val - hw_slider_strt));
-  Serial.println(hw_slider_strt);
-  Serial.println(aux_main_strt);*/
   if (st_layer) {
     fadeAuxCallback(
         linearizedValue(val - hw_slider_strt, hw_slider_strt, aux_main_strt));

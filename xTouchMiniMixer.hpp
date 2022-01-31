@@ -5,7 +5,7 @@
 #define DLY_MIDI 5
 #endif
 #ifndef DLY_COOL
-// delayed after encoder is not touched anymore
+// delay after encoder is not touched anymore
 #define DLY_COOL 1000
 #endif
 
@@ -14,6 +14,11 @@
 #include <stdint.h>
 #include <usbh_midi.h>
 #include <usbhub.h>
+
+#ifndef MY_DEBUG
+#define DEBUG_PRINT(x)
+#define DEBUG_PRINTLN(x)
+#endif
 
 class XTouchMiniMixer {
  public:
