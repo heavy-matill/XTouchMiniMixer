@@ -4,7 +4,7 @@ XTouchMiniMixer::XTouchMiniMixer(USBH_MIDI *new_pUSBH_MIDI, USB *new_pUSB)
     : pUSBH_MIDI(new_pUSBH_MIDI), pUSB(new_pUSB) {}
 
 void XTouchMiniMixer::setup() {
-  Serial.println("initializing XTouch");
+  // Serial.println("initializing XTouch");
 
   setupDebuggingCallbacks();
   setupMidi();
@@ -15,7 +15,7 @@ void XTouchMiniMixer::setupMidi() {
     while (1)
       ;  // halt if (pUSB->Init()==-1
   }
-  Serial.println("initialized pUSB");
+  // Serial.println("initialized pUSB");
 }
 
 void XTouchMiniMixer::update() {
@@ -24,6 +24,9 @@ void XTouchMiniMixer::update() {
     MIDI_poll();
   }
   updateCooldowns();
+#ifdef TASK_MIDI
+  sendBuf();
+#endif
 }
 
 void XTouchMiniMixer::visualizeAll() {
@@ -36,9 +39,9 @@ void XTouchMiniMixer::setValueMute(uint8_t id, bool val) {
   if (idInActualLayer(id)) return visualizeMuteLed(id);
 }
 void XTouchMiniMixer::setValueFade(uint8_t id, uint8_t val) {
-  Serial.print("setValueFade ");
+  /*Serial.print("setValueFade ");
   Serial.println(id);
-  Serial.println(val);
+  Serial.println(val);*/
   faders[id] = val;
   if (idInActualLayer(id) && (st_control == 0))
     return visualizeHotRotaryValue(id % 8);
@@ -93,18 +96,20 @@ void XTouchMiniMixer::visualizeRotaryValue(uint8_t id) {
 }
 
 void XTouchMiniMixer::sendMidiData(uint8_t cmd, uint8_t id, uint8_t val) {
-  Serial.println("sendMidiData");
+  /*Serial.println("sendMidiData");
   Serial.println(cmd);
   Serial.println(id);
-  Serial.println(val);
+  Serial.println(val);*/
   uint8_t buf[3];
   buf[0] = cmd;
   buf[1] = id;
   buf[2] = val;
+#ifdef TASK_MIDI
   appendToBuf(buf);
-  sendBuf();
-  // pUSBH_MIDI->SendData(buf);
-  // delay(DLY_MIDI);
+#else
+  pUSBH_MIDI->SendData(buf);
+  delay(DLY_MIDI);
+#endif
 }
 
 void XTouchMiniMixer::appendToBuf(uint8_t *buf_new) {
@@ -114,18 +119,26 @@ void XTouchMiniMixer::appendToBuf(uint8_t *buf_new) {
   if (j_buf == sizeof(buf_midi) / sizeof(uint8_t)) {
     j_buf = 0;
   }
+  /*Serial.print("midi idx i: ");
+  Serial.print(i_buf);
+  Serial.print(", j: ");
+  Serial.println(j_buf);*/
 }
 
 void XTouchMiniMixer::sendBuf() {
-  uint8_t buf_send[3];
-  buf_send[0] = buf_midi[i_buf++];
-  buf_send[1] = buf_midi[i_buf++];
-  buf_send[2] = buf_midi[i_buf++];
-  if (i_buf == sizeof(buf_midi) / sizeof(uint8_t)) {
-    i_buf = 0;
+  if (i_buf != j_buf) {
+    if (time_last > (time_midi + DLY_MIDI)) {
+      time_midi = time_last;
+      uint8_t buf_send[3];
+      buf_send[0] = buf_midi[i_buf++];
+      buf_send[1] = buf_midi[i_buf++];
+      buf_send[2] = buf_midi[i_buf++];
+      if (i_buf == sizeof(buf_midi) / sizeof(uint8_t)) {
+        i_buf = 0;
+      }
+      pUSBH_MIDI->SendData(buf_send);
+    }
   }
-  pUSBH_MIDI->SendData(buf_send);
-  delay(DLY_MIDI);
 }
 
 void XTouchMiniMixer::setRotary(uint8_t id, uint8_t val) {
@@ -199,8 +212,8 @@ void XTouchMiniMixer::visualizeControlMode() {
 }
 
 void XTouchMiniMixer::onButtonUp(uint8_t id) {
-  Serial.println("Button up");
-  Serial.println(id);
+  /*Serial.println("Button up");
+  Serial.println(id);*/
 
   // get information about layer
   handleNewLayerState(id >= 24);
@@ -222,7 +235,7 @@ void XTouchMiniMixer::onButtonUp(uint8_t id) {
 
 void XTouchMiniMixer::onEncoderMoved(uint8_t ch, uint8_t val) {
   // get information about layer and load into st_layer
-  Serial.println("onEncoderMoved");
+  // Serial.println("onEncoderMoved");
   handleNewLayerState(ch >= 10);
   switch (ch) {
     case 9:  // main fader
@@ -271,10 +284,10 @@ void XTouchMiniMixer::onSliderMoved(uint8_t val, int8_t aux_main) {
     hw_slider_strt = hw_slider;
     aux_main_strt = aux_main;
   }
-  Serial.print("linearizedValue ");
+  /*Serial.print("linearizedValue ");
   Serial.println((int8_t)(val - hw_slider_strt));
   Serial.println(hw_slider_strt);
-  Serial.println(aux_main_strt);
+  Serial.println(aux_main_strt);*/
   if (st_layer) {
     fadeAuxCallback(
         linearizedValue(val - hw_slider_strt, hw_slider_strt, aux_main_strt));
@@ -286,11 +299,13 @@ void XTouchMiniMixer::onSliderMoved(uint8_t val, int8_t aux_main) {
   hw_slider = val;
 }
 
-int8_t XTouchMiniMixer::linearizedValue(int8_t delta_hw, int8_t hw0, int8_t y0) {
+int8_t XTouchMiniMixer::linearizedValue(int8_t delta_hw, int8_t hw0,
+                                        int8_t y0) {
   float delta_y;
   // calculate slope via linearization from actual position to max/min
   if (delta_hw > 0) {
-    // inf due to hw0 = 127 will not happen because then delta_hw cannot be > 0
+    // inf due to hw0 = 127 will not happen because then delta_hw cannot be >
+    // 0
     delta_y = (127.0 - y0) / (127.0 - hw0) * delta_hw;
     if ((delta_y <= 1.0))  // move at least 1 in positive direction
       return y0 + 1;
@@ -460,5 +475,3 @@ void XTouchMiniMixer::fadeAuxPrintln(uint8_t val) {
   Serial.print("fadeAuxCallback val=");
   Serial.println(val);
 }
-
-void XTouchMiniMixer::onInitUSB() { Serial.println("USB Device connected!"); }

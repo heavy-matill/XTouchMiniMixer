@@ -1,10 +1,17 @@
 #pragma once
 
 #ifndef DLY_MIDI
+// delay after sending Midi command to XTouch device 5ms
 #define DLY_MIDI 5
 #endif
 #ifndef DLY_COOL
+// delayed after encoder is not touched anymore
 #define DLY_COOL 1000
+#endif
+
+#ifndef TASK_MIDI
+// if defined, commands are tasked instead auf delayed
+#define TASK_MIDI
 #endif
 
 #include <Arduino.h>
@@ -13,67 +20,20 @@
 #include <usbh_midi.h>
 #include <usbhub.h>
 
-// delay after sending Midi command to XTouch device 5ms
-
-// define function with _i argument for encoders to visualize their value
-// delayed after encoder is not touched anymore
-//#define _FN_ROT_DLYD(_i) void wrappedSetRotaryValues##_i(){
-// visualizeHotRotaryValue(_i+1); };
-
-/*void muteChannelPrintln(uint8_t ch, uint8_t val) {
-  Serial.print("muteChannelCallback ch=");
-  Serial.print(ch);
-  Serial.print(", val=");
-  Serial.println(val);
-}
-void fadeChannelPrintln(uint8_t ch, uint8_t val) {
-  Serial.print("fadeChannelCallback ch=");
-  Serial.print(ch);
-  Serial.print(", val=");
-  Serial.println(val);
-}
-void panChannelPrintln(uint8_t ch, uint8_t val) {
-  Serial.print("panChannelCallback ch=");
-  Serial.print(ch);
-  Serial.print(", val=");
-  Serial.println(val);
-}
-void gainChannelPrintln(uint8_t ch, uint8_t val) {
-  Serial.print("gainChannelCallback ch=");
-  Serial.print(ch);
-  Serial.print(", val=");
-  Serial.println(val);
-}
-void mixChannelPrintln(uint8_t ch, uint8_t bus, uint8_t val) {
-  Serial.print("mixChannelCallback ch=");
-  Serial.print(ch);
-  Serial.print(", bus=");
-  Serial.print(bus);
-  Serial.print(", val=");
-  Serial.println(val);
-}
-void fadeMainPrintln(uint8_t val) {
-  Serial.print("fadeMainCallback val=");
-  Serial.println(val);
-}
-void fadeAuxPrintln(uint8_t val) {
-  Serial.print("fadeAuxCallback val=");
-  Serial.println(val);
-}*/
-
 class XTouchMiniMixer {
  public:
   XTouchMiniMixer(){};
+  // initialize with pointers to Midi host device USBH_MIDI and USB
   XTouchMiniMixer(USBH_MIDI *p, USB *pUSB);
   // states
   uint8_t st_layer, st_control;
   // mixer values
   uint8_t faders[16], gains[16], pans[16], mixes[6][16], colors[16];
-  int8_t aux, aux_main_strt, main, main_strt, hw_slider=-1, hw_slider_strt;
+  int8_t aux, aux_main_strt, main, main_strt, hw_slider = -1, hw_slider_strt;
   int8_t slider_sign;
   uint16_t mutes;
   // tasking 8 cooldowns for rotaries and 1 for main/aux
-  unsigned long cooldowns[9], time_last;
+  unsigned long cooldowns[9], time_last, time_midi, time_init;
   // midi data
   uint8_t buf_midi[255];  // 3*85
   uint8_t i_buf, j_buf;
@@ -84,7 +44,7 @@ class XTouchMiniMixer {
 
   void visualizeAll();
 
-  // setters
+  // setters to set local mixer values
   void setValueMute(uint8_t id, bool val);
   void setValueFade(uint8_t id, uint8_t val);
   void setValuePan(uint8_t id, uint8_t val);
@@ -99,13 +59,11 @@ class XTouchMiniMixer {
 
   void setValueAux(uint8_t val) {
     aux = val;
-    if(!cooldownActive(8))
-      executeCooldownTask(8);
+    if (!cooldownActive(8)) executeCooldownTask(8);
   };
   void setValueMain(uint8_t val) {
     main = val;
-    if(!cooldownActive(8))
-      executeCooldownTask(8);
+    if (!cooldownActive(8)) executeCooldownTask(8);
   };
   void setValueColor(uint8_t id, uint8_t val);
 
@@ -161,9 +119,7 @@ class XTouchMiniMixer {
   uint16_t getVID() { return pUSBH_MIDI->idVendor(); }
   uint16_t getPID() { return pUSBH_MIDI->idProduct(); }
 
-  void attachOnInitUSB(void (*p_func_usb)()) {
-    pUSBH_MIDI->attachOnInit(p_func_usb);
-  }
+  void attachOnInitUSB(void (*p_func_usb)()) { pUSBH_MIDI->attachOnInit(p_func_usb);};
   void setupDebuggingCallbacks() {
     muteChannelCallback = muteChannelPrintln;
     fadeChannelCallback = fadeChannelPrintln;
@@ -172,7 +128,6 @@ class XTouchMiniMixer {
     mixChannelCallback = mixChannelPrintln;
     fadeMainCallback = fadeMainPrintln;
     fadeAuxCallback = fadeAuxPrintln;
-    attachOnInitUSB(onInitUSB);
   }
   void (*muteChannelCallback)(uint8_t, uint8_t) = nullptr;
   void (*fadeChannelCallback)(uint8_t, uint8_t) = nullptr;
@@ -191,9 +146,8 @@ class XTouchMiniMixer {
   static void fadeMainPrintln(uint8_t val);
   static void fadeAuxPrintln(uint8_t val);
 
-  static void onInitUSB();
-
  protected:
   USBH_MIDI *pUSBH_MIDI;
   USB *pUSB;
+  // static void (*onInitUSBCallback)() = nullptr;
 };
