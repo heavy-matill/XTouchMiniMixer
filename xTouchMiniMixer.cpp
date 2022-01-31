@@ -5,7 +5,6 @@ XTouchMiniMixer::XTouchMiniMixer(USBH_MIDI *new_pUSBH_MIDI, USB *new_pUSB)
 
 void XTouchMiniMixer::setup() {
   // Serial.println("initializing XTouch");
-
   setupDebuggingCallbacks();
   setupMidi();
 }
@@ -24,9 +23,7 @@ void XTouchMiniMixer::update() {
     MIDI_poll();
   }
   updateCooldowns();
-#ifdef TASK_MIDI
   sendBuf();
-#endif
 }
 
 void XTouchMiniMixer::visualizeAll() {
@@ -104,12 +101,7 @@ void XTouchMiniMixer::sendMidiData(uint8_t cmd, uint8_t id, uint8_t val) {
   buf[0] = cmd;
   buf[1] = id;
   buf[2] = val;
-#ifdef TASK_MIDI
   appendToBuf(buf);
-#else
-  pUSBH_MIDI->SendData(buf);
-  delay(DLY_MIDI);
-#endif
 }
 
 void XTouchMiniMixer::appendToBuf(uint8_t *buf_new) {

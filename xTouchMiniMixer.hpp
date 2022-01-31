@@ -9,11 +9,6 @@
 #define DLY_COOL 1000
 #endif
 
-#ifndef TASK_MIDI
-// if defined, commands are tasked instead auf delayed
-#define TASK_MIDI
-#endif
-
 #include <Arduino.h>
 #include <MIDI.h>
 #include <stdint.h>
