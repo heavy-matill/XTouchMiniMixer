@@ -119,26 +119,52 @@ class XTouchMiniMixer {
   uint16_t getVID() { return pUSBH_MIDI->idVendor(); }
   uint16_t getPID() { return pUSBH_MIDI->idProduct(); }
 
-  void attachOnInitUSB(void (*p_func_usb)()) { pUSBH_MIDI->attachOnInit(p_func_usb);};
+  void attachOnInitUSB(void (*p_func_usb)()) {
+    pUSBH_MIDI->attachOnInit(p_func_usb);
+  };
   void setupDebuggingCallbacks() {
-    muteChannelCallback = muteChannelPrintln;
-    fadeChannelCallback = fadeChannelPrintln;
-    panChannelCallback = panChannelPrintln;
-    gainChannelCallback = gainChannelPrintln;
-    mixChannelCallback = mixChannelPrintln;
-    fadeMainCallback = fadeMainPrintln;
-    fadeAuxCallback = fadeAuxPrintln;
+    registerMuteChannelCallback(muteChannelPrintln);
+    registerFadeChannelCallback(fadeChannelPrintln);
+    registerPanChannelCallback(panChannelPrintln);
+    registerGainChannelCallback(gainChannelPrintln);
+    registerMixChannelCallback(mixChannelPrintln);
+    registerFadeMainCallback(fadeMainPrintln);
+    registerFadeAuxCallback(fadeAuxPrintln);
   }
-  void (*muteChannelCallback)(uint8_t, uint8_t) = nullptr;
-  void (*fadeChannelCallback)(uint8_t, uint8_t) = nullptr;
-  void (*panChannelCallback)(uint8_t, uint8_t) = nullptr;
-  void (*gainChannelCallback)(uint8_t, uint8_t) = nullptr;
-  void (*mixChannelCallback)(uint8_t, uint8_t, uint8_t) = nullptr;
-  void (*fadeMainCallback)(uint8_t) = nullptr;
-  void (*fadeAuxCallback)(uint8_t) = nullptr;
+
+  std::function<void(uint8_t, bool)> muteChannelCallback;
+  std::function<void(uint8_t, uint8_t)> fadeChannelCallback;
+  std::function<void(uint8_t, uint8_t)> panChannelCallback;
+  std::function<void(uint8_t, uint8_t)> gainChannelCallback;
+  std::function<void(uint8_t, uint8_t, uint8_t)> mixChannelCallback;
+  std::function<void(uint8_t)> fadeMainCallback;
+  std::function<void(uint8_t)> fadeAuxCallback;
+
+  void registerMuteChannelCallback(std::function<void(uint8_t, bool)> cb) {
+    muteChannelCallback = cb;
+  };
+  void registerFadeChannelCallback(std::function<void(uint8_t, uint8_t)> cb) {
+    fadeChannelCallback = cb;
+  };
+  void registerPanChannelCallback(std::function<void(uint8_t, uint8_t)> cb) {
+    panChannelCallback = cb;
+  };
+  void registerGainChannelCallback(std::function<void(uint8_t, uint8_t)> cb) {
+    gainChannelCallback = cb;
+  };
+  void registerMixChannelCallback(
+      std::function<void(uint8_t, uint8_t, uint8_t)> cb) {
+    mixChannelCallback = cb;
+  };
+  void registerFadeMainCallback(std::function<void(uint8_t)> cb) {
+    fadeMainCallback = cb;
+  };
+  void registerFadeAuxCallback(std::function<void(uint8_t)> cb) {
+    fadeAuxCallback = cb;
+  };
 
  private:
-  static void muteChannelPrintln(uint8_t ch, uint8_t val);
+  static void muteChannelPrintln(uint8_t ch, bool val);
   static void fadeChannelPrintln(uint8_t ch, uint8_t val);
   static void panChannelPrintln(uint8_t ch, uint8_t val);
   static void gainChannelPrintln(uint8_t ch, uint8_t val);

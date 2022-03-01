@@ -426,7 +426,7 @@ void XTouchMiniMixer::executeCooldownTask(uint8_t id) {
   }
 }
 
-void XTouchMiniMixer::muteChannelPrintln(uint8_t ch, uint8_t val) {
+void XTouchMiniMixer::muteChannelPrintln(uint8_t ch, bool val) {
   Serial.print("muteChannelCallback ch=");
   Serial.print(ch);
   Serial.print(", val=");
