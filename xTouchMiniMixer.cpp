@@ -31,12 +31,12 @@ void XTouchMiniMixer::visualizeAll() {
   visualizeControlMode();
   visualizeRotaryValues();
 }
-void XTouchMiniMixer::setValueMute(uint8_t id, bool val) {
+void XTouchMiniMixer::setMuted(uint8_t id, bool val) {
   setMuteBit(id, val);
   if (idInActualLayer(id)) return visualizeMuteLed(id);
 }
-void XTouchMiniMixer::setValueFade(uint8_t id, uint8_t val) {
-  DEBUG_PRINT("setValueFade id=");
+void XTouchMiniMixer::setFaded(uint8_t id, uint8_t val) {
+  DEBUG_PRINT("setFaded id=");
   DEBUG_PRINT(id);
   DEBUG_PRINT(" val=");
   DEBUG_PRINTLN(val);
@@ -44,23 +44,23 @@ void XTouchMiniMixer::setValueFade(uint8_t id, uint8_t val) {
   if (idInActualLayer(id) && (st_control == 0))
     return visualizeHotRotaryValue(id % 8);
 }
-void XTouchMiniMixer::setValuePan(uint8_t id, uint8_t val) {
+void XTouchMiniMixer::setPanned(uint8_t id, uint8_t val) {
   pans[id] = val;
   if (idInActualLayer(id) && (st_control == 1))
     return visualizeHotRotaryValue(id % 8);
 }
-void XTouchMiniMixer::setValueGain(uint8_t id, uint8_t val) {
+void XTouchMiniMixer::setGained(uint8_t id, uint8_t val) {
   gains[id] = val;
   if (idInActualLayer(id) && (st_control == 2))
     return visualizeHotRotaryValue(id % 8);
 }
-void XTouchMiniMixer::setValueMix(uint8_t id, uint8_t val, uint8_t bus) {
-  mixes[bus - 1][id] = val;
-  if (idInActualLayer(id) && (bus == getBusMinCh()))
+void XTouchMiniMixer::setMixed(uint8_t id, uint8_t val, uint8_t id_bus) {
+  mixes[id_bus][id] = val;
+  if (idInActualLayer(id) && (st_control >= 3) && (id_bus == getBusMinId()))
     return visualizeHotRotaryValue(id % 8);
 }
 
-void XTouchMiniMixer::setValueColor(uint8_t id, uint8_t val) {
+void XTouchMiniMixer::setColored(uint8_t id, uint8_t val) {
   colors[id] = val;
   // if (idInActualLayer(id)) return visualizeColor(id);
 }
@@ -81,7 +81,7 @@ void XTouchMiniMixer::visualizeRotaryValues(uint8_t id_start, uint8_t id_end) {
   } else {  // mixes, set to values of minimum bus
     for (; id_start <= id_end; id_start++) {
       setRotary(id_start + st_layer * 10,
-                mixes[getBusMinCh() - 1][id_start + st_layer * 8]);
+                mixes[getBusMinId()][id_start + st_layer * 8]);
     }
   }
 }
@@ -228,33 +228,33 @@ void XTouchMiniMixer::onButtonUp(uint8_t id) {
   }
 }
 
-void XTouchMiniMixer::onEncoderMoved(uint8_t ch, uint8_t val) {
+void XTouchMiniMixer::onEncoderMoved(uint8_t id, uint8_t val) {
   // get information about layer and load into st_layer
   DEBUG_PRINTLN("onEncoderMoved");
-  handleNewLayerState(ch >= 10);
-  switch (ch) {
-    case 9:  // main fader
+  handleNewLayerState(id >= 9);
+  switch (id) {
+    case 8:  // main fader
       onSliderMoved(val, main);
       break;
-    case 10:  // aux fader
+    case 9:  // aux fader
       onSliderMoved(val, aux);
       break;
     default:
-      if (ch > 10) {
-        ch -= 2;
+      if (id > 9) {
+        id -= 2;
       }
-      enableCooldown((ch - 1) % 8);
+      enableCooldown(id % 8);
       if (st_control == 0) {
-        fadeChannelCallback(ch, val);
+        fadeChannelCallback(id, val);
       } else if (st_control == 1) {
-        panChannelCallback(ch, val);
+        panChannelCallback(id, val);
       } else if (st_control == 2) {
-        gainChannelCallback(ch, val);
+        gainChannelCallback(id, val);
       } else {
         // set to values of minimum bus
-        for (uint8_t bus = 1; bus <= 6; bus++) {
-          if (st_control & (1 << (1 + bus))) {
-            mixChannelCallback(ch, bus, val);
+        for (uint8_t id_bus = 0; id_bus < 6; id_bus++) {
+          if (st_control & (1 << (2 + id_bus))) {
+            mixChannelCallback(id, val, id_bus);
           }
         }
       }
@@ -353,12 +353,9 @@ void XTouchMiniMixer::blinkAllButtons() {
   }
 }
 
-uint8_t XTouchMiniMixer::getBusMinCh() {
-  if (st_control <= 3) {
-    return 0;
-  }
+uint8_t XTouchMiniMixer::getBusMinId() {
   uint8_t temp_st = st_control;
-  uint8_t bus_min = 6;
+  uint8_t bus_min = 5;
   while (temp_st <<= 1) {
     bus_min--;
   }
@@ -422,39 +419,40 @@ void XTouchMiniMixer::executeCooldownTask(uint8_t id) {
       aux_main_strt = main;
     }
   } else {  // rotary
-    visualizeHotRotaryValue(id + 1);
+    visualizeHotRotaryValue(id);
   }
 }
 
-void XTouchMiniMixer::muteChannelPrintln(uint8_t ch, bool val) {
+void XTouchMiniMixer::muteChannelPrintln(uint8_t id, bool val) {
   Serial.print("muteChannelCallback ch=");
-  Serial.print(ch);
+  Serial.print(id + 1);
   Serial.print(", val=");
   Serial.println(val);
 }
-void XTouchMiniMixer::fadeChannelPrintln(uint8_t ch, uint8_t val) {
+void XTouchMiniMixer::fadeChannelPrintln(uint8_t id, uint8_t val) {
   Serial.print("fadeChannelCallback ch=");
-  Serial.print(ch);
+  Serial.print(id + 1);
   Serial.print(", val=");
   Serial.println(val);
 }
-void XTouchMiniMixer::panChannelPrintln(uint8_t ch, uint8_t val) {
+void XTouchMiniMixer::panChannelPrintln(uint8_t id, uint8_t val) {
   Serial.print("panChannelCallback ch=");
-  Serial.print(ch);
+  Serial.print(id + 1);
   Serial.print(", val=");
   Serial.println(val);
 }
-void XTouchMiniMixer::gainChannelPrintln(uint8_t ch, uint8_t val) {
+void XTouchMiniMixer::gainChannelPrintln(uint8_t id, uint8_t val) {
   Serial.print("gainChannelCallback ch=");
-  Serial.print(ch);
+  Serial.print(id + 1);
   Serial.print(", val=");
   Serial.println(val);
 }
-void XTouchMiniMixer::mixChannelPrintln(uint8_t ch, uint8_t bus, uint8_t val) {
+void XTouchMiniMixer::mixChannelPrintln(uint8_t id, uint8_t val,
+                                        uint8_t id_bus) {
   Serial.print("mixChannelCallback ch=");
-  Serial.print(ch);
+  Serial.print(id + 1);
   Serial.print(", bus=");
-  Serial.print(bus);
+  Serial.print(id_bus + 1);
   Serial.print(", val=");
   Serial.println(val);
 }

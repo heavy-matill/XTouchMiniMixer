@@ -45,27 +45,27 @@ class XTouchMiniMixer {
   void visualizeAll();
 
   // setters to set local mixer values
-  void setValueMute(uint8_t id, bool val);
-  void setValueFade(uint8_t id, uint8_t val);
-  void setValuePan(uint8_t id, uint8_t val);
-  void setValueGain(uint8_t id, uint8_t val);
-  void setValueMix(uint8_t id, uint8_t val, uint8_t bus);
-  void setValueMix1(uint8_t id, uint8_t val) { return setValueMix(id, val, 1); }
-  void setValueMix2(uint8_t id, uint8_t val) { return setValueMix(id, val, 2); }
-  void setValueMix3(uint8_t id, uint8_t val) { return setValueMix(id, val, 3); }
-  void setValueMix4(uint8_t id, uint8_t val) { return setValueMix(id, val, 4); }
-  void setValueMix5(uint8_t id, uint8_t val) { return setValueMix(id, val, 5); }
-  void setValueMix6(uint8_t id, uint8_t val) { return setValueMix(id, val, 6); }
+  void setMuted(uint8_t id, bool val);
+  void setFaded(uint8_t id, uint8_t val);
+  void setPanned(uint8_t id, uint8_t val);
+  void setGained(uint8_t id, uint8_t val);
+  void setMixed(uint8_t id, uint8_t val, uint8_t bus);
+  /*void setValueMix1(uint8_t id, uint8_t val) { return setMixed(id, val, 1); }
+  void setValueMix2(uint8_t id, uint8_t val) { return setMixed(id, val, 2); }
+  void setValueMix3(uint8_t id, uint8_t val) { return setMixed(id, val, 3); }
+  void setValueMix4(uint8_t id, uint8_t val) { return setMixed(id, val, 4); }
+  void setValueMix5(uint8_t id, uint8_t val) { return setMixed(id, val, 5); }
+  void setValueMix6(uint8_t id, uint8_t val) { return setMixed(id, val, 6); }*/
 
-  void setValueAux(uint8_t val) {
+  void setAuxFaded(uint8_t val) {
     aux = val;
     if (!cooldownActive(8)) executeCooldownTask(8);
   };
-  void setValueMain(uint8_t val) {
+  void setMainFaded(uint8_t val) {
     main = val;
     if (!cooldownActive(8)) executeCooldownTask(8);
   };
-  void setValueColor(uint8_t id, uint8_t val);
+  void setColored(uint8_t id, uint8_t val);
 
   // visualizations set to certain values or update to whats stored in mixer
   // values
@@ -93,7 +93,7 @@ class XTouchMiniMixer {
 
   // input callbacks
   void onButtonUp(uint8_t id);
-  void onEncoderMoved(uint8_t ch, uint8_t val);
+  void onEncoderMoved(uint8_t id, uint8_t val);
   void onSliderMoved(uint8_t val, int8_t aux_main);
   static int8_t linearizedValue(int8_t delta_hw, int8_t hw0, int8_t y0);
 
@@ -104,7 +104,7 @@ class XTouchMiniMixer {
 
   void blinkAllButtons();
 
-  uint8_t getBusMinCh();
+  uint8_t getBusMinId();
   bool idInActualLayer(uint8_t i);
   // Midi related
   void MIDI_poll();
@@ -164,11 +164,11 @@ class XTouchMiniMixer {
   };
 
  private:
-  static void muteChannelPrintln(uint8_t ch, bool val);
-  static void fadeChannelPrintln(uint8_t ch, uint8_t val);
-  static void panChannelPrintln(uint8_t ch, uint8_t val);
-  static void gainChannelPrintln(uint8_t ch, uint8_t val);
-  static void mixChannelPrintln(uint8_t ch, uint8_t bus, uint8_t val);
+  static void muteChannelPrintln(uint8_t id, bool val);
+  static void fadeChannelPrintln(uint8_t id, uint8_t val);
+  static void panChannelPrintln(uint8_t id, uint8_t val);
+  static void gainChannelPrintln(uint8_t id, uint8_t val);
+  static void mixChannelPrintln(uint8_t id, uint8_t val, uint8_t id_bus);
   static void fadeMainPrintln(uint8_t val);
   static void fadeAuxPrintln(uint8_t val);
 
